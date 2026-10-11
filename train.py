@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import torch
+import json
+from pathlib import Path
+import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -139,4 +142,86 @@ for epoch in range(epochs):
 with torch.no_grad():
     nn_val_prob = torch.sigmoid(nn_model(X_val_t)).numpy()
 
-print("nn.Module validation log loss:", log_loss(y_val, nn_val_prob))
+# Business costs (assumptions stated in the report)
+PRICE = 50          # price of the product
+DISCOUNT = 0.20     # discount shown to visitors predicted not to buy
+CONVERSION = 0.10   # share of leaving visitors that the discount would convince
+COST_MISSED_SALE = PRICE * CONVERSION      # $5: predicted "will buy", but the visitor left
+COST_WASTED_DISCOUNT = PRICE * DISCOUNT    # $10: predicted "won't buy", but would have bought anyway
+
+
+def total_cost(y_true, prob, threshold):
+    y_true = np.asarray(y_true)
+    pred_buy = prob >= threshold                              # True = predicted to buy, no discount
+    missed_sales = np.sum(pred_buy & (y_true == 0))           # predicted buy, did not buy
+    wasted_discounts = np.sum(~pred_buy & (y_true == 1))      # predicted no buy, did buy
+    return missed_sales * COST_MISSED_SALE + wasted_discounts * COST_WASTED_DISCOUNT
+
+
+# Naive baselines: no model at all
+print("Cost, discount for everyone:", total_cost(y_val, np.zeros(len(y_val)), 0.5))
+print("Cost, discount for no one:", total_cost(y_val, np.ones(len(y_val)), 0.5))
+
+# Try every threshold from 0.01 to 0.99 on the validation group and keep the cheapest
+thresholds = np.round(np.arange(0.01, 1.00, 0.01), 2)
+costs = [total_cost(y_val, sk_val_prob, t) for t in thresholds]
+best_threshold = thresholds[int(np.argmin(costs))]
+print("Best threshold:", best_threshold, "with cost:", min(costs))
+
+# Final evaluation on the test group, using the threshold chosen on validation
+X_test_t = torch.tensor(X_test_s, dtype=torch.float32)
+
+sk_test_prob = sk_model.predict_proba(X_test_s)[:, 1]
+with torch.no_grad():
+    manual_test_prob = torch.sigmoid(X_test_t @ w + b).numpy()
+    nn_test_prob = torch.sigmoid(nn_model(X_test_t)).numpy()
+
+# Naive baseline: every visitor gets the average purchase rate from training.
+# That is below the threshold, so it means "discount for everyone".
+baseline_test_prob = np.full(len(y_test), y_train.mean())
+
+results = []
+for name, prob in [
+    ("Naive baseline", baseline_test_prob),
+    ("scikit-learn", sk_test_prob),
+    ("Manual PyTorch loop", manual_test_prob),
+    ("nn.Module + torch.optim", nn_test_prob),
+]:
+    results.append({
+        "Model": name,
+        "Log loss": round(log_loss(y_test, prob), 4),
+        "AUC": round(roc_auc_score(y_test, prob), 4),
+        "Total cost ($)": total_cost(y_test, prob, best_threshold),
+    })
+
+results_df = pd.DataFrame(results)
+print(results_df.to_string(index=False))
+
+# Save everything the dashboard needs, so it never has to retrain
+out = Path("artifacts")
+out.mkdir(exist_ok=True)
+
+# The three trained models and the scaler
+joblib.dump(sk_model, out / "sk_model.joblib")
+joblib.dump(scaler, out / "scaler.joblib")
+torch.save({"w": w.detach(), "b": b.detach()}, out / "manual_model.pt")
+torch.save(nn_model.state_dict(), out / "nn_model.pt")
+
+# The prepared test group and the results table
+np.save(out / "X_test.npy", X_test_s)
+np.save(out / "y_test.npy", y_test.to_numpy())
+results_df.to_csv(out / "results.csv", index=False)
+
+# The threshold and the cost assumptions
+settings = {
+    "best_threshold": float(best_threshold),
+    "price": PRICE,
+    "discount": DISCOUNT,
+    "conversion": CONVERSION,
+    "feature_names": X.columns.tolist(),
+    "train_purchase_rate": float(y_train.mean()),
+}
+with open(out / "settings.json", "w") as f:
+    json.dump(settings, f, indent=2)
+
+print("Saved artifacts to", out)
