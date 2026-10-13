@@ -40,7 +40,7 @@ With this in mind, the metric that should be used to determine threshold is "Tot
 
 ## Data preparation & feature engineering
 
-**Data Quality**: The dataset had no missing values requiring no cleaning on this regard. Throughout the whole dataset approximately 1% of rows (125 rows) were exact duplicates which I decided to keep. Almost all of them (94%) are one-page sessions where the visitor left immediately, and none ended in a purchase. Different visitors can easily produce identical sessions like these, so they ar emost likely genuine and I kept them.   
+**Data Quality**: The dataset had no missing values requiring no cleaning on this regard. Throughout the whole dataset approximately 1% of rows (125 rows) were exact duplicates which I decided to keep. Almost all of them (94%) are one-page sessions where the visitor left immediately, and none ended in a purchase. Different visitors can easily produce identical sessions like these, so they are most likely genuine and I kept them.   
 
 **Columns Removed**: 
 - "PageValues" was dropped because Google Analytics calculates it from completed
@@ -78,7 +78,7 @@ With this in mind, the metric that should be used to determine threshold is "Tot
 - "Weekend" and "Revenue" were converted from True/False to 1/0.
 
 **What did not work.**
-- Tested the average time per product page which made business sense but added nothing. After the log transform, the model can already compute it from the two columns it comes from.. In general, the transformations added very little improvement and removing "PageValues" limited predictions substantially.
+- Tested the average time per product page which made business sense but added nothing. After the log transform, the model can already compute it from the two columns it comes from. In general, the transformations added very little improvement and removing "PageValues" limited predictions substantially.
 
 **Scaling**
 - All columns were standardized so that all columns are on the same scale, which lets gradient descent train properly and makes the weights comparable (mean 0, spread 1). Values learned from the training set were used only and then applied to validation and test, so no information from those sets leaks into the preparation. 
