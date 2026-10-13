@@ -3,7 +3,7 @@
 - **Name**: Julian Consuegra
 - **Student ID**: 19376
 - **Email**: jconsuegra.ieu2022@student.ie.edu
-- **Group**: "BBADBA 5A"
+- **Group**: BBADBA 5A
 
 ## Dataset
 
@@ -19,7 +19,7 @@ I picked this  dataset since it brings interesting insights on user behavior and
 
 ## Business / real-life framing
 
-This model aims to predict whether a session ends in a purhcase through different factors and how this influences their purchasing decision. The business is an online shop/e-commerce and it wants to offer discounts to customers who are likely to leave without buying, in order to incentivize purchase and increase conversion rates. Based on patterns gathered in training data, this model will be able to predict purchasing likelihood for new user sessions in order to apply targeted discounts towards those who are predicted not to buy.
+This model aims to predict whether a session ends in a purchase through different factors and how this influences their purchasing decision. The business is an online shop/e-commerce and it wants to offer discounts to customers who are likely to leave without buying, in order to incentivize purchase and increase conversion rates. Based on patterns gathered in training data, this model will be able to predict purchasing likelihood for new user sessions in order to apply targeted discounts towards those who are predicted not to buy.
 
 Based on this business scenario, I decided to use "Revenue" as the target since the ultimate goal of the shop is to know if a customer will buy or not. If there are repetitive patterns that affect behavior and lead towards the value under "Revenue" being either "TRUE" or "FALSE", there is a clear strategic opportunity that needs to be addressed. The column/target will be kept and used as is, there is no need to make any modification. 
 
@@ -40,13 +40,13 @@ With this in mind, the metric that should be used to determine threshold is "Tot
 
 ## Data preparation & feature engineering
 
-**Data Quality**: The dataset had no missing values requiring no cleaning on this regard. Throughout the whole dataset approximately 1% of rows (125 rows) were exact duplicates which I decided to keep. They all represented real one-page sessions where the visitor left immediately and none of them ended up in a purchase. Apart from the fact that this sample is very small, keeping it makes the data more accurate by taking into account extraordinary scenarios.   
+**Data Quality**: The dataset had no missing values requiring no cleaning on this regard. Throughout the whole dataset approximately 1% of rows (125 rows) were exact duplicates which I decided to keep. Almost all of them (94%) are one-page sessions where the visitor left immediately, and none ended in a purchase. Different visitors can easily produce identical sessions like these, so they ar emost likely genuine and I kept them.   
 
 **Columns Removed**: 
 - "PageValues" was dropped because Google Analytics calculates it from completed
   purchases, so it partly contains the outcome the model predicts (data leakage). 
   It was by far the strongest predictor: 56% of sessions with a value above 0 bought,
-  against 4% at 0. The model's score will decrease. Dropping this prevents the model of having information that will not be available when making the discount decision.
+  against 4% at 0. The model's score will decrease. Dropping this prevents the model from having information that will not be available when making the discount decision.
   
 - "Browser", "OperatingSystems" and "Region" were dropped because the purchase rate
   barely changes across their values and there is no business reason for them to
@@ -78,10 +78,10 @@ With this in mind, the metric that should be used to determine threshold is "Tot
 - "Weekend" and "Revenue" were converted from True/False to 1/0.
 
 **What did not work.**
-- Tested the average time per product page which made business sense but added nothing. The log trasform is able to compute it from the two columns it comes from. In general, the transformations added very little improvement and removing "PageValues" limited predicictions substantially.
+- Tested the average time per product page which made business sense but added nothing. After the log transform, the model can already compute it from the two columns it comes from.. In general, the transformations added very little improvement and removing "PageValues" limited predictions substantially.
 
 **Scaling**
-- All columns were standardized for optimal model interpretation (mean 0, spread 1). Values learned from the training set were used only and then applied to validation and test, so no information from those sets leaks into the preparation. 
+- All columns were standardized so that all columns are on the same scale, which lets gradient descent train properly and makes the weights comparable (mean 0, spread 1). Values learned from the training set were used only and then applied to validation and test, so no information from those sets leaks into the preparation. 
 
 
 ## Modeling: three implementations, one model
