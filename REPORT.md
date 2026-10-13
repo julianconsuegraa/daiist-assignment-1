@@ -1,18 +1,11 @@
 # Assignment 1 Report
 
-*Delete this italic guidance as you fill in each section. You'll be asked to
-defend any of this without your code in front of you — write only what you
-can actually explain.*
-
 - **Name**: Julian Consuegra
 - **Student ID**: 19376
 - **Email**: jconsuegra.ieu2022@student.ie.edu
-- **Group**: [BBADBA 5A]
+- **Group**: "BBADBA 5A"
 
 ## Dataset
-
-*What is it, where did you get it, what does one row represent, how many
-rows/columns, and why did you pick it.*
 
 The dataset was retrieved from the UCI Machine Learning Repository and is named "Online Shoppers Purchasing Intention". 
 
@@ -22,16 +15,11 @@ Size: 12,330 rows (unique users) and 18 columns: 17 inputs plus the target, Reve
 
 Target: I will be utilizing the column "Revenue" as a target. The value is "TRUE" if session ended in a purchase and "FALSE" if not. Only about 15% of sessions end up in a purchase.
 
-I picked this  dataset since it brings interesting insights on user behavior and relevant conclusions can be drawn regarding what leads a person to actually purchase products on an e-commerce site. On a personal note, I truly believe that successful strategy campaigns backed by relevant data can turn a business around, and this seemed like an interesting opportunity to pursue this curiosity and measure impact using detailed consumer information. Also, the specificity and amount of factors considered in the dataset seemed valuable now that analysis can be performed on a deeper scale producing higher value solutions. 
+I picked this  dataset since it brings interesting insights on user behavior and relevant conclusions can be drawn regarding what leads a person to actually purchase products on an e-commerce site. On a personal note, I truly believe that successful strategy campaigns backed by relevant data can turn a business around, and this seemed like an interesting opportunity to pursue this curiosity and measure impact using detailed consumer information. Also, the specificity and amount of factors considered in the dataset seemed valuable since analysis can be performed on a deeper scale producing higher value solutions. 
 
 ## Business / real-life framing
 
-*The hypothetical scenario this model serves, and what that scenario implies
-for how you built the pipeline — target definition, whether a time-based
-split was necessary and why (or why not), which metric should drive the
-decision threshold and why.*
-
-This model aims to predict user browsing behavior through different factors and how this influences their purchasing decision. The business is an online shop/e-commerce and it wants to offer discounts to customers who are likely to leave without buying, in order to incentivize purchase and increase conversion rates. Based on patterns gathered in training data, this model will be able to predict purchasing likelihood for new user sessions in order to apply targeted discounts towards those who are predicted not to buy.
+This model aims to predict whether a session ends in a purhcase through different factors and how this influences their purchasing decision. The business is an online shop/e-commerce and it wants to offer discounts to customers who are likely to leave without buying, in order to incentivize purchase and increase conversion rates. Based on patterns gathered in training data, this model will be able to predict purchasing likelihood for new user sessions in order to apply targeted discounts towards those who are predicted not to buy.
 
 Based on this business scenario, I decided to use "Revenue" as the target since the ultimate goal of the shop is to know if a customer will buy or not. If there are repetitive patterns that affect behavior and lead towards the value under "Revenue" being either "TRUE" or "FALSE", there is a clear strategic opportunity that needs to be addressed. The column/target will be kept and used as is, there is no need to make any modification. 
 
@@ -52,18 +40,13 @@ With this in mind, the metric that should be used to determine threshold is "Tot
 
 ## Data preparation & feature engineering
 
-*What you engineered and why, and any data-quality decisions you made along
-the way — e.g. "segment X had defective data, so I excluded it and used a
-population-average default for scope Y at inference time; the impact of
-that choice is Z."*
-
 **Data Quality**: The dataset had no missing values requiring no cleaning on this regard. Throughout the whole dataset approximately 1% of rows (125 rows) were exact duplicates which I decided to keep. They all represented real one-page sessions where the visitor left immediately and none of them ended up in a purchase. Apart from the fact that this sample is very small, keeping it makes the data more accurate by taking into account extraordinary scenarios.   
 
 **Columns Removed**: 
 - "PageValues" was dropped because Google Analytics calculates it from completed
   purchases, so it partly contains the outcome the model predicts (data leakage). 
   It was by far the strongest predictor: 56% of sessions with a value above 0 bought,
-  against 4% at 0. The accuracy will evidently decrease but it will make the model more realistic now that information about which pages will be visited by a user at the beggining of the session will not be available in a testing set. Dropping this prevents the model of having information that will not be available when making the discount decision.
+  against 4% at 0. The model's score will decrease. Dropping this prevents the model of having information that will not be available when making the discount decision.
   
 - "Browser", "OperatingSystems" and "Region" were dropped because the purchase rate
   barely changes across their values and there is no business reason for them to
@@ -79,7 +62,7 @@ that choice is Z."*
   sources. This column refers to how the visitor arrived at the website (search engine result, ad, newsletter). Sources with fewer than 100 sessions were merged into one "other" group,
   since a handful of sessions gives the model nothing reliable to learn from. I first
   used a cut-off of 200, then lowered it to 100 so that source 20 (198 sessions, 25%
-  purchase rate) keeps its own column. After grouping, these were also one-hot encoded (Traffic_Type1, Traffic_Type2, etc).
+  purchase rate) keeps its own column. After grouping, these were also one-hot encoded (TrafficType_1, TrafficType_2, etc).
 
 **Transformations and new features.**
 - The six page-count and time columns were log-transformed ("log1p"). They contain a
@@ -94,13 +77,14 @@ that choice is Z."*
   The gain was small.
 - "Weekend" and "Revenue" were converted from True/False to 1/0.
 
+**What did not work.**
+- Tested the average time per product page which made business sense but added nothing. The log trasform is able to compute it from the two columns it comes from. In general, the transformations added very little improvement and removing "PageValues" limited predicictions substantially.
+
+**Scaling**
+- All columns were standardized for optimal model interpretation (mean 0, spread 1). Values learned from the training set were used only and then applied to validation and test, so no information from those sets leaks into the preparation. 
+
 
 ## Modeling: three implementations, one model
-
-*Which model (linear or logistic regression) and why. A results table
-comparing scikit-learn, the manual PyTorch loop, and the standard
-torch.nn.Module/torch.optim workflow, on the same test set, against the
-naive baseline. Do the three agree? If not, why not?*
 
 **Model.** Logistic regression, because the target is binary (bought or not).
 
@@ -113,8 +97,7 @@ naive baseline. Do the three agree? If not, why not?*
 - nn.Module + torch.optim: the same loop with "nn.Linear", "BCEWithLogitsLoss" and
   "optim.SGD", same learning rate and steps.
 
-**Threshold.** Chosen on the validation set as the cheapest of 0.01 to 0.99: 0.31,
-close to the theoretical break-even of 5 / (5 + 10) = 0.33.
+**Threshold.** Every threshold from 0.01 to 0.99 was tried on the validation set, and 0.31 gave the lowest total cost. 
 
 **Test set results** (2,466 sessions):
 
@@ -146,7 +129,7 @@ versions run a fixed 5,000 steps.
 - **Assumed costs.** The price ($50), discount (20%) and the share of leavers the
   discount convinces (10%) are assumptions, and the dataset contains no discounts, so
   their real effect cannot be measured. The best threshold and the saving depend on
-  them. *Fix:* run an A/B test showing the discount to a random group of visitors to
+  them. *Fix:* Run an A/B test showing the discount to a random group of visitors to
   measure its real effect, then update the costs. The dashboard already lets these
   values be changed.
 - **`PageValues` dropped.** Removing the leaking column limits the model to an AUC of
@@ -154,13 +137,12 @@ versions run a fixed 5,000 steps.
   which keeps most of the signal without leaking the outcome.
 - **Unnamed traffic sources.** Traffic sources are numeric codes with no published
   meaning, so the model uses them but they cannot guide marketing decisions.
-  *Fix:* obtain the channel names from the shop.
+  *Fix:* Obtain the channel names from the shop.
 - **One shop, one year.** The data covers a single site and 10 months (no January or
-  April), so the results may not transfer to other shops or seasons. *Fix:* retrain
+  April), so the results may not transfer to other shops or seasons. *Fix:* Retrain
   on more recent and broader data before using the model in practice.
 
 ## Generative AI use disclosure
-*Per the syllabus AI Policy: what you used and how, or "no AI content used."*
 
 I used Claude to assist me throughout the assignment and I will specify how in each section:
 
@@ -168,7 +150,10 @@ I used Claude to assist me throughout the assignment and I will specify how in e
 Once the assignment was understood, Claude helped me explore possible datasets with their respective business framings that I could work with. Once I chose the option of greater relevance and interest to me, Claude pointed out key considerations that needed to be addressed before starting. For example, pointing out that with my initial assumptions, every customer presented with a discount would purchase so there would be no need in creating a model. Like this, other small details that helped me re frame the problem and polish the solution. 
 
 **Pre-Processing & Engineering Details**
-Key concepts of pre processing and engineering were re-clarified by Claude (OHE, leakage, log transfomration and stratified split among others) before applying changes. I ran exploratory checks that helped me decide what to modify in the data based on Claude's recommendations and on my own criteria after undertanding the bases of this step.
+Key concepts of pre processing and engineering were re-clarified by Claude (OHE, leakage, log transformation and stratified split among others) before applying changes. I ran exploratory checks that helped me decide what to modify in the data based on Claude's recommendations and on my own criteria after understanding the bases of this step.
 
 **Coding**
-Claude developed the code for "train.py" step by step while I ran and checked each step based on the established business framing. After this, the "app.py" was written by Claude in order to properly develop the Dashboard. I intervened to make sure the overall aesthetic followed my vision of a professional and slick look/feel. I directed its redesign so that it had a professional look and every chart reflected a finding with business relevance.
+Claude developed the code for "train.py" step by step while I ran and checked each step based on the established business framing. After this, the "app.py" was written by Claude in order to properly develop the Dashboard. I directed its redesign so that it had a professional look and every chart reflected a finding with business relevance.
+
+**Report**
+Wording and review of the different sections of the report. Helped with the framing of technical concepts and double checking the overall flow of the report was clear. 
